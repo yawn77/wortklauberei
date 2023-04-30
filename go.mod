@@ -1,3 +1,3 @@
-module github.com/yawn77/tmplgolang
+module github.com/yawn77/wortklauberei
 
 go 1.20

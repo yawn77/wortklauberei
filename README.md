@@ -1,45 +1,26 @@
-# <project_name>
+# wortklauberei
 
-Template for go projects. Checkout `setup.md` to initialize this template.
-
-This is a recommendation about what should be in the `README.md`. All sections are optional. Use [https://www.makeareadme.com/](https://www.makeareadme.com/) as indicator how to improve the `README.md`.
-
-Here you should start with a short description of the project.
+Strategically find words.
 
 ## Features
 
-List the main features of the project.
-
-## Background
-
-Provide background information of the project.
+* TODO
 
 ## Installation
 
-Provide installation requirements for different platforms. Do not forget to mention requirements.
+TODO
 
 ## Usage
 
-Describe how your software can be used on different platforms.
-
-## Support
-
-How people can get help.
+TODO
 
 ## Roadmap
 
-Ideas and next steps.
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-## Authors and Acknowledgment
-
-Mention authors and acknowledgements.
+* library to cope with words
+* first command-line version
+* API version
+* multiplayer
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[GNU AGPLv3](https://choosealicense.com/licenses/agpl-3.0/)

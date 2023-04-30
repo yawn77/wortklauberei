@@ -32,7 +32,7 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-          yawn77/tmplgolang:latest
-          yawn77/tmplgolang:${{ env.RELEASE_VERSION }}
+          yawn77/wordklauberei:latest
+          yawn77/wordklauberei:${{ env.RELEASE_VERSION }}
         build-args: |
           VERSION=${{ env.RELEASE_VERSION }}

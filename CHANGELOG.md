@@ -8,13 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.1.0] - 2023-01-08
 ### Added
-* README.md
-* CHANGELOG.md
-* Sample code
-* GitHub Workflows for build, test and lint
-* Docker github workflow & Dockerfile
-* GitHub Workflow to publish binaries automatically incl. version tag for each release
-* Pull-request template
+* TODO
 
-[unreleased]: https://github.com/yawn77/tmplgolang/compare/v0.1.0...HEAD
-[v0.1.0]: https://github.com/yawn77/tmplgolang/releases/tag/v0.1.0
+[unreleased]: https://github.com/yawn77/wordklauberei/compare/v0.1.0...HEAD
+[v0.1.0]: https://github.com/yawn77/wordklauberei/releases/tag/v0.1.0

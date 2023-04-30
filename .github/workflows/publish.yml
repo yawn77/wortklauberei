@@ -37,5 +37,5 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         ldflags: -X main.version=${{ env.RELEASE_VERSION }}
-        project_path: "./cmd/tmplgolang"
+        project_path: "./cmd/wordklauberei"
         extra_files: LICENSE README.md
