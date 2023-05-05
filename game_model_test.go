@@ -57,35 +57,35 @@ func TestNewGameFail(t *testing.T) {
 		expected    error
 	}{
 		{
-			"word contains space",
+			"test word with space",
 			"he llo",
 			[]string{"he llo"},
 			6,
 			fmt.Errorf("game initialization failed: word %s must consist of letters only", "he llo"),
 		},
 		{
-			"word contains dot",
+			"test word with dot",
 			"hello.",
 			[]string{"hello."},
 			6,
 			fmt.Errorf("game initialization failed: word %s must consist of letters only", "hello."),
 		},
 		{
-			"word not in word list",
+			"test word that is not in word list",
 			"hello",
 			[]string{"hallo"},
 			6,
 			fmt.Errorf("game initialization failed: word %s not in list of valid words %v", "hello", []string{"hallo"}),
 		},
 		{
-			"max attempts = 0",
+			"test max attempts = 0",
 			"hello",
 			[]string{"hello"},
 			0,
 			fmt.Errorf("game initialization failed: number of maximum attempts must be greater than 0 but is %d", 0),
 		},
 		{
-			"max attempts is negative",
+			"test max attempts is negative",
 			"hello",
 			[]string{"hello"},
 			-1,
@@ -96,54 +96,220 @@ func TestNewGameFail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testcase, func(t *testing.T) {
 			_, err := NewGame(tt.word, tt.validWords, tt.maxAttempts)
-			if err.Error() != tt.expected.Error() {
+			if err == nil || err.Error() != tt.expected.Error() {
 				t.Errorf("error expected: %v != %v", tt.expected, err)
 			}
 		})
 	}
 }
 
-// TODO
-func TestCheckSolutionCorrect(t *testing.T) {
+func TestCheckSolutionCorrectAfterThreeAttempts(t *testing.T) {
 	// arrange
-	word := "hello"
-	m, _ := NewGame(word, []string{}, 6)
+	word := "dizzy"
+	m, _ := NewGame(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 6)
 
-	// act
-	c, o, cc, _, v := m.CheckSolution(word)
-
-	// assert
-	if !c && !o && cc != nil && v != nil {
-		t.Errorf("m.checkSolution(%s) != %t", word, true)
+	// act & assert
+	correct, gameOver, colorCode, keyboardColors, valid := m.CheckSolution("hello")
+	if correct ||
+		gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Gray, Gray, Gray, Gray, Gray}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray}) ||
+		valid != nil {
+		t.Errorf("error after hello")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = m.CheckSolution("whizz")
+	if correct ||
+		gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Gray, Gray, Yellow, Green, Yellow}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray, 119: Gray, 105: Yellow, 122: Green}) ||
+		valid != nil {
+		t.Errorf("error after whizz")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = m.CheckSolution("dizzy")
+	if !correct ||
+		!gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Green, Green, Green, Green, Green}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray, 119: Gray, 105: Green, 122: Green, 100: Green, 121: Green}) ||
+		valid != nil {
+		t.Errorf("error after dizzy")
 	}
 }
 
-// TODO
-func TestCheckSolutionWrongWord(t *testing.T) {
+func TestCheckSolutionCorrectAtLastAttempt(t *testing.T) {
 	// arrange
-	m, _ := NewGame("hello", []string{}, 6)
+	word := "dizzy"
+	m, _ := NewGame(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 3)
 
-	// act
-	s := "hallo"
-	c, o, cc, _, v := m.CheckSolution(s)
-
-	// assert
-	if c && !o && cc != nil && v != nil {
-		t.Errorf("m.checkSolution(%s) == %t", s, true)
+	// act & assert
+	correct, gameOver, colorCode, keyboardColors, valid := m.CheckSolution("hello")
+	if correct ||
+		gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Gray, Gray, Gray, Gray, Gray}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray}) ||
+		valid != nil {
+		t.Errorf("error after hello")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = m.CheckSolution("whizz")
+	if correct ||
+		gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Gray, Gray, Yellow, Green, Yellow}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray, 119: Gray, 105: Yellow, 122: Green}) ||
+		valid != nil {
+		t.Errorf("error after whizz")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = m.CheckSolution("dizzy")
+	if !correct ||
+		!gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Green, Green, Green, Green, Green}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{104: Gray, 101: Gray, 108: Gray, 111: Gray, 119: Gray, 105: Green, 122: Green, 100: Green, 121: Green}) ||
+		valid != nil {
+		t.Errorf("error after dizzy")
 	}
 }
 
-// TODO
-func TestCountRunes(t *testing.T) {
+func TestCheckSolutionAfterGameOver(t *testing.T) {
+	// arrange
+	word := "dizzy"
+	m, _ := NewGame(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 3)
+
+	// act & assert
+	correct, gameOver, colorCode, keyboardColors, valid := m.CheckSolution("dizzy")
+	if !correct ||
+		!gameOver ||
+		!reflect.DeepEqual(colorCode, ColorCode{Green, Green, Green, Green, Green}) ||
+		!reflect.DeepEqual(keyboardColors, KeyboardColors{100: Green, 105: Green, 122: Green, 121: Green}) ||
+		valid != nil {
+		t.Errorf("error after dizzy")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = m.CheckSolution("whizz")
+	if correct ||
+		!gameOver ||
+		colorCode != nil ||
+		keyboardColors != nil ||
+		valid.Error() != fmt.Errorf("game is already over").Error() {
+		t.Errorf("game was not over yet")
+	}
+}
+
+func TestCheckSolutionInputValidation(t *testing.T) {
+	tests := []struct {
+		testcase   string
+		word       string
+		validWords []string
+		solution   string
+		expected   error
+	}{
+		{
+			"test invalid word length",
+			"hello",
+			[]string{"hello", "hell"},
+			"hell",
+			fmt.Errorf("length of solution must be %d but is %d", 5, 4),
+		},
+		{
+			"test solution contains special characters",
+			"hello",
+			[]string{"hello", "hell."},
+			"hell.",
+			fmt.Errorf("solution must consists of letters  only"),
+		},
+		{
+			"test solution contains numbers",
+			"hello",
+			[]string{"hello", "hell6"},
+			"hell6",
+			fmt.Errorf("solution must consists of letters  only"),
+		},
+		{
+			"test solution not in word list",
+			"hello",
+			[]string{"hello"},
+			"hallo",
+			fmt.Errorf("suggested solution is not in list of valid words"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testcase, func(t *testing.T) {
+			// arrange
+			g, _ := NewGame(tt.word, tt.validWords, 6)
+
+			// act
+			correct, gameOver, colorCode, keyboardColors, valid := g.CheckSolution(tt.solution)
+
+			// assert
+			if valid == nil || valid.Error() != tt.expected.Error() {
+				t.Errorf("error expected: %v != %v", tt.expected, valid)
+			}
+			if correct || gameOver || colorCode != nil || keyboardColors != nil {
+				t.Error("expected other return values")
+			}
+		})
+	}
+}
+
+func TestCalculateColorCodeAndUpdateKeyboardColors(t *testing.T) {
+	tests := []struct {
+		testcase   string
+		suggestion string
+		solution   string
+		expectedCC ColorCode
+		expectedKC KeyboardColors
+	}{
+		{
+			"test suggestion == solution",
+			"hello",
+			"hello",
+			ColorCode{Green, Green, Green, Green, Green},
+			KeyboardColors{104: Green, 101: Green, 108: Green, 111: Green},
+		},
+		{
+			"test len(suggestion) != len(solution)",
+			"hello",
+			"hell",
+			nil,
+			KeyboardColors{},
+		},
+		{
+			"test some green, some yellow, some gray",
+			"halle",
+			"hello",
+			ColorCode{Green, Gray, Green, Green, Yellow},
+			KeyboardColors{104: Green, 97: Gray, 108: Green, 101: Yellow},
+		},
+		{
+			"test one letter green, yellow and gray",
+			"laffllk",
+			"laflenr",
+			ColorCode{Green, Green, Green, Gray, Yellow, Gray, Gray},
+			KeyboardColors{108: Green, 97: Green, 102: Green, 107: Gray},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testcase, func(t *testing.T) {
+			g, _ := NewGame(tt.solution, []string{tt.solution, tt.suggestion}, 6)
+			cc := g.calculateColorCodeAndUpdateKeyboardColors(tt.suggestion)
+			if !reflect.DeepEqual(cc, tt.expectedCC) {
+				t.Errorf("calculateColorCodeAndUpdateKeyboardColors(%s, %s) = %v, expected %v", tt.suggestion, tt.solution, cc, tt.expectedCC)
+			}
+			if !reflect.DeepEqual(g.keyboardColors, tt.expectedKC) {
+				t.Errorf("unexpected keyboard colors: %v != %v", g.keyboardColors, tt.expectedKC)
+			}
+		})
+	}
+}
+
+func TestCalculateRuneHistogram(t *testing.T) {
 	tests := []struct {
 		testcase string
 		s        string
-		expected map[rune]uint8
+		expected RuneHistogram
 	}{
 		{
-			"test casual string: hello",
+			"test casual string",
 			"hello",
-			map[rune]uint8{
+			RuneHistogram{
 				104: 1,
 				101: 1,
 				108: 2,
@@ -151,9 +317,9 @@ func TestCountRunes(t *testing.T) {
 			},
 		},
 		{
-			"umlauts: ööÖßü",
+			"test umlauts",
 			"ööÖßü",
-			map[rune]uint8{
+			RuneHistogram{
 				246: 2,
 				214: 1,
 				223: 1,
@@ -161,9 +327,9 @@ func TestCountRunes(t *testing.T) {
 			},
 		},
 		{
-			"empty string",
+			"test empty string",
 			"",
-			map[rune]uint8{},
+			RuneHistogram{},
 		},
 	}
 
@@ -177,53 +343,6 @@ func TestCountRunes(t *testing.T) {
 	}
 }
 
-// TODO
-func TestCalculateColorCode(t *testing.T) {
-	tests := []struct {
-		testcase   string
-		suggestion string
-		solution   string
-		expected   ColorCode
-	}{
-		{
-			"suggestion == solution",
-			"hello",
-			"hello",
-			ColorCode{Green, Green, Green, Green, Green},
-		},
-		{
-			"len(suggestion) != len(solution)",
-			"hello",
-			"hell",
-			nil,
-		},
-		{
-			"some green, some yellow, some gray",
-			"halle",
-			"hello",
-			ColorCode{Green, Gray, Green, Green, Yellow},
-		},
-		{
-			"one letter green, yellow and gray",
-			"laffllk",
-			"laflenr",
-			ColorCode{Green, Green, Green, Gray, Yellow, Gray, Gray},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.testcase, func(t *testing.T) {
-			g, _ := NewGame(tt.solution, []string{tt.solution, tt.suggestion}, 6)
-			cc := g.calculateColorCodeAndUpdateKeyboardColors(tt.suggestion)
-			if !reflect.DeepEqual(cc, tt.expected) {
-				t.Errorf("calculateColorCode(%s, %s) = %v, expected %v", tt.suggestion, tt.solution, cc, tt.expected)
-			}
-			// TODO check g.usedLetters
-		})
-	}
-}
-
-// TODO
 func TestIsAllLetters(t *testing.T) {
 	tests := []struct {
 		testcase string
@@ -231,32 +350,32 @@ func TestIsAllLetters(t *testing.T) {
 		expected bool
 	}{
 		{
-			"Testcase IsAllLetters(\"hallo\")",
+			"test word with letters only",
 			"hallo",
 			true,
 		},
 		{
-			"Testcase IsAllLetters(\"öäüßÖÄÜ\")",
+			"test umlauts",
 			"öäüßÖÄÜ",
 			true,
 		},
 		{
-			"Testcase IsAllLetters(\"\")",
+			"test empty word",
 			"",
 			true,
 		},
 		{
-			"Testcase IsAllLetters(\"hallo du\")",
+			"test two words with space",
 			"hallo du",
 			false,
 		},
 		{
-			"Testcase IsAllLetters(\"hallo.du\")",
+			"test word with special character",
 			"hallo.du",
 			false,
 		},
 		{
-			"Testcase IsAllLetters(\"hallo7du\")",
+			"test word with number",
 			"hallo7du",
 			false,
 		},
@@ -272,7 +391,6 @@ func TestIsAllLetters(t *testing.T) {
 	}
 }
 
-// TODO
 func TestWordInWordList(t *testing.T) {
 	tests := []struct {
 		testcase string
@@ -281,13 +399,13 @@ func TestWordInWordList(t *testing.T) {
 		expected bool
 	}{
 		{
-			"Testcase WordInWordList('hey', ['you', 'hey', 'there'])",
+			"test word is in word list",
 			"hey",
 			[]string{"you", "hey", "there"},
 			true,
 		},
 		{
-			"Testcase WordInWordList('hey', ['you', 'there'])",
+			"test word is not in word list",
 			"hey",
 			[]string{"you", "there"},
 			false,
