@@ -84,3 +84,41 @@ func TestIsWordInWordList(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLower(t *testing.T) {
+	tests := []struct {
+		testcase string
+		s        string
+		expected bool
+	}{
+		{
+			"common word",
+			"hey",
+			true,
+		},
+		{
+			"umlauts",
+			"möp",
+			true,
+		},
+		{
+			"capital letter",
+			"Hello",
+			false,
+		},
+		{
+			"space and special character",
+			"hey you!",
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testcase, func(t *testing.T) {
+			b := utils.IsLower(tt.s)
+			if b != tt.expected {
+				t.Errorf("IsLower(%s) = %t", tt.s, b)
+			}
+		})
+	}
+}

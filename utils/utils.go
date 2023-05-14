@@ -19,3 +19,12 @@ func IsWordInWordList(w string, wl []string) bool {
 	}
 	return false
 }
+
+func IsLower(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLower(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
+}

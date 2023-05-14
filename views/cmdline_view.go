@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/yawn77/wortklauberei/handlers"
+	"github.com/yawn77/wortklauberei/utils"
 )
 
 type CmdlineView struct {
@@ -41,6 +42,7 @@ func (clv *CmdlineView) CreateNewGameBoard(wordLength int, maxAttempts int) {
 	clv.resetError()
 	clv.curRow = 0
 	clv.curCol = 0
+	clv.enableRow(clv.curRow)
 	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
 }
 
@@ -76,15 +78,6 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 	return hflex
 }
 
-func IsLower(s string) bool {
-	for _, r := range s {
-		if !unicode.IsLower(r) && unicode.IsLetter(r) {
-			return false
-		}
-	}
-	return true
-}
-
 func (clv *CmdlineView) newInputField() *tview.InputField {
 	inp := tview.NewInputField().
 		SetFieldWidth(1).
@@ -92,14 +85,52 @@ func (clv *CmdlineView) newInputField() *tview.InputField {
 			return len([]rune(textToCheck)) <= 1 && (unicode.IsLetter(lastChar))
 		}).
 		SetChangedFunc(func(text string) {
-			if text != "" && text != "ß" && IsLower(text) {
-				clv.inputFields[clv.curCol][clv.curRow].SetText(strings.ToUpper(text))
+			if text != "" && text != "ß" && utils.IsLower(text) {
+				clv.inputFields[clv.curRow][clv.curCol].SetText(strings.ToUpper(text))
+				clv.goToNextInputField(false)
 			}
 		})
 	inp.SetBackgroundColor(tcell.ColorBlue)
 	inp.SetDisabled(true)
 
 	return inp
+}
+
+func (clv *CmdlineView) goToNextInputField(overflow bool) {
+	if overflow && clv.curCol == len(clv.inputFields[clv.curRow])-1 {
+		clv.curCol = -1
+	}
+	if clv.curCol >= len(clv.inputFields[clv.curRow])-1 {
+		return
+	}
+	clv.curCol++
+	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+}
+
+func (clv *CmdlineView) goToPreviousInputField() {
+	curText := clv.inputFields[clv.curRow][clv.curCol].GetText()
+	if clv.curCol == 0 || curText != "" {
+		return
+	}
+	clv.curCol--
+	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+}
+
+func (clv *CmdlineView) enableRow(row int) {
+	if row < 0 || row >= len(clv.inputFields) {
+		return
+	}
+	if row > 0 {
+		prev := row - 1
+		for col := 0; col < len(clv.inputFields[prev]); col++ {
+			clv.inputFields[prev][col].SetDisabled(true)
+		}
+	}
+	for col := 0; col < len(clv.inputFields[row]); col++ {
+		clv.inputFields[row][col].SetDisabled(false)
+	}
+	clv.curCol = 0
+	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
 }
 
 func (gc CmdlineView) Run() {
@@ -114,6 +145,27 @@ func (clv *CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 		clv.newGame()
 	case tcell.KeyCtrlQ:
 		clv.quit()
+	case tcell.KeyTab:
+		clv.goToNextInputField(true)
+	case tcell.KeyBackspace2:
+		clv.goToPreviousInputField()
+	case tcell.KeyEnter:
+		s := ""
+		fields := clv.inputFields[clv.curRow]
+		for i := 0; i < len(fields); i++ {
+			s += fields[i].GetText()
+		}
+		correct, gameOver, _, _, valid := clv.gameHandler.CheckSolution(s)
+		if valid != nil {
+			clv.errorlabel.SetText(valid.Error())
+		} else if correct {
+			clv.errorlabel.SetText("CONGRATULATIONS! YOU WON :)")
+		} else if gameOver {
+			clv.errorlabel.SetText("GAME OVER. YOU LOST :(")
+		} else {
+			clv.curRow++
+			clv.enableRow(clv.curRow)
+		}
 	}
 	return event
 }
