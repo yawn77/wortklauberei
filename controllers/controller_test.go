@@ -102,6 +102,32 @@ func TestCheckSolutionAfterGameOver(t *testing.T) {
 	}
 }
 
+func TestCheckSolutionAfterMaxAttempts(t *testing.T) {
+	// arrange
+	word := "dizzy"
+	gc, _ := NewGameController("0.1.0")
+	gm, _ := models.NewGameModel(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 2)
+	gc.gameModel = gm
+
+	// act & assert
+	correct, gameOver, colorCode, keyboardColors, valid := gc.CheckSolution("pozzy")
+	if correct ||
+		gameOver ||
+		!reflect.DeepEqual(colorCode, models.ColorCode{models.Gray, models.Gray, models.Green, models.Green, models.Green}) ||
+		!reflect.DeepEqual(keyboardColors, models.KeyboardColors{112: models.Gray, 111: models.Gray, 122: models.Green, 121: models.Green}) ||
+		valid != nil {
+		t.Errorf("error after dizzy")
+	}
+	correct, gameOver, colorCode, keyboardColors, valid = gc.CheckSolution("whizz")
+	if correct ||
+		!gameOver ||
+		!reflect.DeepEqual(colorCode, models.ColorCode{models.Gray, models.Gray, models.Yellow, models.Green, models.Yellow}) ||
+		!reflect.DeepEqual(keyboardColors, models.KeyboardColors{112: models.Gray, 111: models.Gray, 122: models.Green, 121: models.Green, 119: models.Gray, 104: models.Gray, 105: models.Yellow}) ||
+		valid != nil {
+		t.Errorf("game was not over yet")
+	}
+}
+
 func TestCheckSolutionInputValidation(t *testing.T) {
 	tests := []struct {
 		testcase   string

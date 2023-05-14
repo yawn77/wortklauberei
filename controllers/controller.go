@@ -18,7 +18,7 @@ type GameController struct {
 func NewGameController(version string) (gc GameController, err error) {
 	gc.version = version
 	gc.view = views.NewCmdlineView(&gc, gc.version)
-	err = gc.CreateNewGame(5, 6)
+	err = gc.CreateNewGame(4, 3)
 	return gc, err
 }
 
@@ -28,13 +28,13 @@ func (gc GameController) Run() {
 
 func (gc *GameController) CreateNewGame(wordLength int, maxAttempts int) error {
 	// TODO provide propper inputs
-	gm, err := models.NewGameModel("hallo", []string{"Gurke", "Salat", "hallo", "Kekse", "Berlin", "hello"}, maxAttempts)
+	gm, err := models.NewGameModel("JUPP", []string{"JUPP", "ATHI", "ZAHL", "COKE", "JACK"}, maxAttempts)
 	if err != nil {
 		return err
 	}
 	gc.gameModel = gm
 	// TODO provide propper word lenth
-	gc.view.CreateNewGameBoard(5, maxAttempts)
+	gc.view.CreateNewGameBoard(4, maxAttempts)
 	return err
 }
 
@@ -61,6 +61,7 @@ func (gc *GameController) CheckSolution(solution string) (correct bool, gameOver
 	}
 
 	colorCode = calculateColorCodeAndUpdateKeyboardColors(*gm, solution)
+	gm.CurAttempt++
 	return correct, gm.GameOver, colorCode, gm.KeyboardColors, nil
 }
 
