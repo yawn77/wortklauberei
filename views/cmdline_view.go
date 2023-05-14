@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -10,23 +12,94 @@ import (
 )
 
 type CmdlineView struct {
+	gameHandler        handlers.GameHandler
 	app                *tview.Application
-	mv                 *tview.Flex
-	gh                 handlers.GameHandler
+	mainView           *tview.Flex
+	inputFields        [][]*tview.InputField
+	curRow             int
+	curCol             int
+	errorlabel         *tview.TextView
 	ngWordLength       int
 	ngNumberOfAttempts int
+	version            string
 }
 
 func NewCmdlineView(gh handlers.GameHandler, version string) (clv CmdlineView) {
+	clv.gameHandler = gh
+	clv.version = version
 	clv.app = tview.NewApplication()
-	clv.mv = clv.buildMainView(version)
-	clv.app.SetRoot(clv.mv, true)
-	clv.app.SetInputCapture(clv.inputCapture)
 	clv.app.EnableMouse(true)
-	clv.gh = gh
-	clv.ngWordLength = 5
-	clv.ngNumberOfAttempts = 6
 	return clv
+}
+
+func (clv *CmdlineView) CreateNewGameBoard(wordLength int, maxAttempts int) {
+	clv.ngWordLength = wordLength
+	clv.ngNumberOfAttempts = maxAttempts
+	clv.mainView = clv.buildMainView(wordLength, maxAttempts, clv.version)
+	clv.app.SetInputCapture(clv.inputCapture)
+	clv.app.SetRoot(clv.mainView, true)
+	clv.resetError()
+	clv.curRow = 0
+	clv.curCol = 0
+	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+}
+
+func (clv *CmdlineView) buildMainView(width int, height int, version string) (hflex *tview.Flex) {
+	hflex = tview.NewFlex().SetDirection(tview.FlexRow)
+	hflex.SetBorder(true).SetTitle(fmt.Sprintf(" wortklauberei %s ", version))
+	hflex.AddItem(tview.NewBox(), 0, 1, false)
+
+	clv.inputFields = make([][]*tview.InputField, height)
+	for i := range clv.inputFields {
+		clv.inputFields[i] = make([]*tview.InputField, width)
+	}
+	hflex.AddItem(tview.NewBox(), 1, 0, false)
+	for i := 0; i < height; i++ {
+		row := tview.NewFlex().SetDirection(tview.FlexColumn)
+		row.AddItem(tview.NewBox(), 0, 1, false)
+		row.AddItem(tview.NewBox(), 1, 0, false)
+		for j := 0; j < width; j++ {
+			clv.inputFields[i][j] = clv.newInputField()
+			row.AddItem(clv.inputFields[i][j], 1, 0, false)
+			row.AddItem(tview.NewBox(), 1, 0, false)
+		}
+		row.AddItem(tview.NewBox(), 0, 1, false)
+		hflex.AddItem(row, 1, 0, false)
+		hflex.AddItem(tview.NewBox(), 1, 0, false)
+	}
+
+	hflex.AddItem(tview.NewBox(), 0, 1, false)
+	clv.errorlabel = tview.NewTextView().SetText("").SetTextColor(tcell.ColorRed)
+	hflex.AddItem(clv.errorlabel, 1, 0, false)
+	hflex.AddItem(clv.createFooter(), 1, 0, false)
+
+	return hflex
+}
+
+func IsLower(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLower(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func (clv *CmdlineView) newInputField() *tview.InputField {
+	inp := tview.NewInputField().
+		SetFieldWidth(1).
+		SetAcceptanceFunc(func(textToCheck string, lastChar rune) bool {
+			return len([]rune(textToCheck)) <= 1 && (unicode.IsLetter(lastChar))
+		}).
+		SetChangedFunc(func(text string) {
+			if text != "" && text != "ß" && IsLower(text) {
+				clv.inputFields[clv.curCol][clv.curRow].SetText(strings.ToUpper(text))
+			}
+		})
+	inp.SetBackgroundColor(tcell.ColorBlue)
+	inp.SetDisabled(true)
+
+	return inp
 }
 
 func (gc CmdlineView) Run() {
@@ -35,7 +108,7 @@ func (gc CmdlineView) Run() {
 	}
 }
 
-func (clv CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
+func (clv *CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyCtrlN:
 		clv.newGame()
@@ -45,17 +118,9 @@ func (clv CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 	return event
 }
 
-func (clv *CmdlineView) buildMainView(version string) (hflex *tview.Flex) {
-	hflex = tview.NewFlex().SetDirection(tview.FlexRow)
-	hflex.SetBorder(true).SetTitle(fmt.Sprintf(" wortklauberei %s ", version))
-	hflex.AddItem(tview.NewBox(), 0, 1, false)
-	ft := clv.createFooter()
-	hflex.AddItem(ft, 1, 0, false)
-	return hflex
-}
-
-func (clv *CmdlineView) BuildNewBoard(wordLength int, maxAttempts int) {
-	clv.mv.Clear()
+func verifyNumberInput(textToCheck string, lastChar rune) bool {
+	i, err := strconv.Atoi(textToCheck)
+	return err == nil && i >= 2 && i <= 9
 }
 
 func (clv *CmdlineView) createFooter() (ft *tview.Flex) {
@@ -74,6 +139,21 @@ func (clv *CmdlineView) createFooter() (ft *tview.Flex) {
 	return ft
 }
 
+func createButton(label string, handler func()) (btn *tview.Button) {
+	btn = tview.NewButton(label).SetSelectedFunc(handler)
+	btn.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlueViolet))
+	btn.SetLabelColor(tcell.ColorGhostWhite)
+	return btn
+}
+
+func (clv *CmdlineView) resetError() {
+	clv.errorlabel.SetText("")
+}
+
+func (clv *CmdlineView) cancelDialog() {
+	clv.app.SetRoot(clv.mainView, true)
+}
+
 func (clv *CmdlineView) quit() {
 	qd := tview.NewModal().
 		SetText("Do you want to quit wortklauberei?").
@@ -86,22 +166,6 @@ func (clv *CmdlineView) quit() {
 			}
 		})
 	clv.app.SetRoot(qd, true)
-}
-
-func (clv *CmdlineView) cancelDialog() {
-	clv.app.SetRoot(clv.mv, true)
-}
-
-func createButton(label string, handler func()) (btn *tview.Button) {
-	btn = tview.NewButton(label).SetSelectedFunc(handler)
-	btn.SetStyle(tcell.StyleDefault.Background(tcell.ColorBlueViolet))
-	btn.SetLabelColor(tcell.ColorGhostWhite)
-	return btn
-}
-
-func verifyNumberInput(textToCheck string, lastChar rune) bool {
-	i, err := strconv.Atoi(textToCheck)
-	return err == nil && i >= 2 && i <= 9
 }
 
 func (clv CmdlineView) newGame() {
@@ -121,12 +185,12 @@ func (clv CmdlineView) newGame() {
 	}
 	form := tview.NewForm().
 		AddInputField("Word Length (2-9)",
-			strconv.Itoa(6),
+			strconv.Itoa(clv.ngWordLength),
 			1,
 			verifyNumberInput,
 			setWordLength).
 		AddInputField("Number of Attempts (2-9)",
-			strconv.Itoa(5),
+			strconv.Itoa(clv.ngNumberOfAttempts),
 			1,
 			verifyNumberInput,
 			setNumberOfAttempts).
@@ -147,8 +211,9 @@ func (clv CmdlineView) newGame() {
 }
 
 func (clv *CmdlineView) setupGame() {
-	err := clv.gh.CreateNewGame(clv.ngWordLength, clv.ngNumberOfAttempts)
+	err := clv.gameHandler.CreateNewGame(clv.ngWordLength, clv.ngNumberOfAttempts)
 	if err != nil {
 		// TODO
+		fmt.Println("ahoi")
 	}
 }

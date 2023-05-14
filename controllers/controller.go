@@ -33,7 +33,8 @@ func (gc *GameController) CreateNewGame(wordLength int, maxAttempts int) error {
 		return err
 	}
 	gc.gameModel = gm
-	gc.view.BuildNewBoard(wordLength, maxAttempts)
+	// TODO provide propper word lenth
+	gc.view.CreateNewGameBoard(5, maxAttempts)
 	return err
 }
 
