@@ -6,18 +6,18 @@ import (
 
 	"github.com/yawn77/wortklauberei/models"
 	"github.com/yawn77/wortklauberei/utils"
-	"github.com/yawn77/wortklauberei/views"
+	cmdlineview "github.com/yawn77/wortklauberei/views/cmdline_view"
 )
 
 type GameController struct {
 	gameModel models.GameModel
-	view      views.CmdlineView
+	view      cmdlineview.CmdlineView
 	version   string
 }
 
 func NewGameController(version string) (gc GameController, err error) {
 	gc.version = version
-	gc.view = views.NewCmdlineView(&gc, gc.version)
+	gc.view = cmdlineview.NewCmdlineView(&gc, gc.version)
 	err = gc.CreateNewGame(4, 3)
 	return gc, err
 }

@@ -1,4 +1,4 @@
-package views
+package cmdlineview
 
 import (
 	"fmt"
@@ -43,7 +43,15 @@ func (clv *CmdlineView) CreateNewGameBoard(wordLength int, maxAttempts int) {
 	clv.curRow = 0
 	clv.curCol = 0
 	clv.enableRow(clv.curRow)
+	clv.setFocus()
+}
+
+func (clv *CmdlineView) setFocus() {
 	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+}
+
+func (clv *CmdlineView) curInputField() *tview.InputField {
+	return clv.inputFields[clv.curRow][clv.curCol]
 }
 
 func (clv *CmdlineView) buildMainView(width int, height int, version string) (hflex *tview.Flex) {
@@ -86,7 +94,7 @@ func (clv *CmdlineView) newInputField() *tview.InputField {
 		}).
 		SetChangedFunc(func(text string) {
 			if text != "" && text != "ß" && utils.IsLower(text) {
-				clv.inputFields[clv.curRow][clv.curCol].SetText(strings.ToUpper(text))
+				clv.curInputField().SetText(strings.ToUpper(text))
 				clv.goToNextInputField(false)
 			}
 		})
@@ -104,16 +112,16 @@ func (clv *CmdlineView) goToNextInputField(overflow bool) {
 		return
 	}
 	clv.curCol++
-	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+	clv.setFocus()
 }
 
 func (clv *CmdlineView) goToPreviousInputField() {
-	curText := clv.inputFields[clv.curRow][clv.curCol].GetText()
+	curText := clv.curInputField().GetText()
 	if clv.curCol == 0 || curText != "" {
 		return
 	}
 	clv.curCol--
-	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+	clv.setFocus()
 }
 
 func (clv *CmdlineView) enableRow(row int) {
@@ -130,7 +138,7 @@ func (clv *CmdlineView) enableRow(row int) {
 		clv.inputFields[row][col].SetDisabled(false)
 	}
 	clv.curCol = 0
-	clv.app.SetFocus(clv.inputFields[clv.curRow][clv.curCol])
+	clv.setFocus()
 }
 
 func (gc CmdlineView) Run() {
@@ -150,24 +158,28 @@ func (clv *CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyBackspace2:
 		clv.goToPreviousInputField()
 	case tcell.KeyEnter:
-		s := ""
-		fields := clv.inputFields[clv.curRow]
-		for i := 0; i < len(fields); i++ {
-			s += fields[i].GetText()
-		}
-		correct, gameOver, _, _, valid := clv.gameHandler.CheckSolution(s)
-		if valid != nil {
-			clv.errorlabel.SetText(valid.Error())
-		} else if correct {
-			clv.errorlabel.SetText("CONGRATULATIONS! YOU WON :)")
-		} else if gameOver {
-			clv.errorlabel.SetText("GAME OVER. YOU LOST :(")
-		} else {
-			clv.curRow++
-			clv.enableRow(clv.curRow)
-		}
+		clv.checkSolution()
 	}
 	return event
+}
+
+func (clv *CmdlineView) checkSolution() {
+	s := ""
+	fields := clv.inputFields[clv.curRow]
+	for i := 0; i < len(fields); i++ {
+		s += fields[i].GetText()
+	}
+	correct, gameOver, _, _, valid := clv.gameHandler.CheckSolution(s)
+	if valid != nil {
+		clv.errorlabel.SetText(valid.Error())
+	} else if correct {
+		clv.errorlabel.SetText("CONGRATULATIONS! YOU WON :)")
+	} else if gameOver {
+		clv.errorlabel.SetText("GAME OVER. YOU LOST :(")
+	} else {
+		clv.curRow++
+		clv.enableRow(clv.curRow)
+	}
 }
 
 func verifyNumberInput(textToCheck string, lastChar rune) bool {
@@ -200,72 +212,4 @@ func createButton(label string, handler func()) (btn *tview.Button) {
 
 func (clv *CmdlineView) resetError() {
 	clv.errorlabel.SetText("")
-}
-
-func (clv *CmdlineView) cancelDialog() {
-	clv.app.SetRoot(clv.mainView, true)
-}
-
-func (clv *CmdlineView) quit() {
-	qd := tview.NewModal().
-		SetText("Do you want to quit wortklauberei?").
-		AddButtons([]string{"Quit", "Cancel"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Quit" {
-				clv.app.Stop()
-			} else {
-				clv.cancelDialog()
-			}
-		})
-	clv.app.SetRoot(qd, true)
-}
-
-func (clv CmdlineView) newGame() {
-	setWordLength := func(text string) {
-		i, nil := strconv.Atoi(text)
-		if nil != nil {
-			i = 5
-		}
-		clv.ngWordLength = i
-	}
-	setNumberOfAttempts := func(text string) {
-		i, nil := strconv.Atoi(text)
-		if nil != nil {
-			i = 6
-		}
-		clv.ngNumberOfAttempts = i
-	}
-	form := tview.NewForm().
-		AddInputField("Word Length (2-9)",
-			strconv.Itoa(clv.ngWordLength),
-			1,
-			verifyNumberInput,
-			setWordLength).
-		AddInputField("Number of Attempts (2-9)",
-			strconv.Itoa(clv.ngNumberOfAttempts),
-			1,
-			verifyNumberInput,
-			setNumberOfAttempts).
-		AddButton("New Game", clv.setupGame).
-		AddButton("Cancel", clv.cancelDialog)
-	form.SetBorder(true).SetTitle("New Game").SetTitleAlign(tview.AlignCenter)
-
-	modal := func(p tview.Primitive, width, height int) *tview.Flex {
-		return tview.NewFlex().
-			AddItem(nil, 0, 1, false).
-			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-				AddItem(nil, 0, 1, false).
-				AddItem(p, height, 1, true).
-				AddItem(nil, 0, 1, false), width, 1, true).
-			AddItem(nil, 0, 1, false)
-	}(form, 30, 9)
-	clv.app.SetRoot(modal, true)
-}
-
-func (clv *CmdlineView) setupGame() {
-	err := clv.gameHandler.CreateNewGame(clv.ngWordLength, clv.ngNumberOfAttempts)
-	if err != nil {
-		// TODO
-		fmt.Println("ahoi")
-	}
 }
