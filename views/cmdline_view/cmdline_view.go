@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	// backgroundColor         = tcell.NewRGBColor(6, 0, 71)
-	backgroundColor         = tcell.ColorBlack
+	backgroundColor         = tcell.NewRGBColor(33, 33, 33)
 	textColor               = tcell.NewRGBColor(255, 255, 255)
 	activeBackgroundColor   = tcell.NewRGBColor(255, 95, 158)
 	disabledBackgroundColor = tcell.NewRGBColor(179, 0, 94)
@@ -183,7 +182,7 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 	hflex.AddItem(createBox(), 0, 1, false)
 	clv.label = tview.NewFlex().SetDirection(tview.FlexColumn)
 	clv.SetLabelText("")
-	hflex.AddItem(clv.label, 1, 0, false)
+	hflex.AddItem(clv.label, 2, 0, false)
 	clv.footer = clv.createFooter()
 	hflex.AddItem(clv.footer, 1, 0, false)
 
