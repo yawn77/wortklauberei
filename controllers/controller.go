@@ -34,7 +34,7 @@ func (gc *GameController) CreateNewGame(wordLength int, maxAttempts int) error {
 	}
 	gc.gameModel = gm
 	// TODO provide propper word lenth
-	gc.view.CreateNewGameBoard(4, maxAttempts)
+	gc.view.NewGame(4, maxAttempts)
 	return err
 }
 
