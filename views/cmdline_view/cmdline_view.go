@@ -9,15 +9,20 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/yawn77/wortklauberei/handlers"
+	"github.com/yawn77/wortklauberei/models"
 	"github.com/yawn77/wortklauberei/utils"
 )
 
 var (
-	backgroundColor         = tcell.NewRGBColor(6, 0, 71)
+	// backgroundColor         = tcell.NewRGBColor(6, 0, 71)
+	backgroundColor         = tcell.ColorBlack
 	textColor               = tcell.NewRGBColor(255, 255, 255)
 	activeBackgroundColor   = tcell.NewRGBColor(255, 95, 158)
 	disabledBackgroundColor = tcell.NewRGBColor(179, 0, 94)
 	enabledBackgroundColor  = tcell.NewRGBColor(233, 0, 100)
+	solutionGray            = tcell.NewRGBColor(133, 133, 133)
+	solutionGreen           = tcell.NewRGBColor(0, 150, 0)
+	solutionYellow          = tcell.NewRGBColor(0, 150, 150)
 )
 
 type CmdlineView struct {
@@ -42,6 +47,7 @@ func NewCmdlineView(gh handlers.GameHandler, version string) (clv CmdlineView) {
 	clv.version = version
 	// TODO handle error
 	s, _ := tcell.NewScreen()
+	// TODO enable and fix tests
 	// s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
 	clv.app = tview.NewApplication()
 	clv.app.SetScreen(s)
@@ -61,11 +67,17 @@ func (clv *CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyCtrlQ:
 		clv.quit()
 	case tcell.KeyTab:
-		clv.activateNextField(true)
+		if !clv.gameOver {
+			clv.activateNextField(true)
+		}
 	case tcell.KeyBackspace2:
-		clv.activatePreviousField()
+		if !clv.gameOver {
+			clv.activatePreviousField()
+		}
 	case tcell.KeyEnter:
-		clv.checkSolution()
+		if !clv.gameOver {
+			clv.checkSolution()
+		}
 	}
 	return event
 }
@@ -79,19 +91,26 @@ func (clv *CmdlineView) checkSolution() {
 	for i := 0; i < len(fields); i++ {
 		s += fields[i].GetText()
 	}
-	correct, gameOver, _, _, valid := clv.gameHandler.CheckSolution(s)
+	correct, gameOver, colorCode, _, valid := clv.gameHandler.CheckSolution(s)
 	clv.gameOver = gameOver
+
 	if valid != nil {
 		clv.SetLabelText(valid.Error())
-	} else if correct {
-		clv.SetLabelText("CONGRATULATIONS! YOU WON :)")
-		clv.app.SetFocus(clv.footer)
-	} else if gameOver {
-		clv.SetLabelText("GAME OVER. YOU LOST :(")
-		clv.app.SetFocus(clv.footer)
-	} else {
-		clv.activateNextRow()
+		return
 	}
+
+	clv.applyColorCode(colorCode)
+
+	if correct || gameOver {
+		if correct {
+			clv.SetLabelText("CONGRATULATIONS! YOU WON :)")
+		} else if gameOver {
+			clv.SetLabelText("GAME OVER. YOU LOST :(")
+		}
+		return
+	}
+
+	clv.activateNextRow()
 }
 
 func (clv *CmdlineView) activeField() *tview.InputField {
@@ -101,6 +120,21 @@ func (clv *CmdlineView) activeField() *tview.InputField {
 func setColor(field *tview.InputField, color tcell.Color) {
 	field.SetBackgroundColor(color)
 	field.SetFieldBackgroundColor(color)
+}
+
+func (clv *CmdlineView) applyColorCode(code models.ColorCode) {
+	row := clv.fields[clv.activeRow]
+	for i := 0; i < clv.width; i++ {
+		field := row[i]
+		switch code[i] {
+		case models.Gray:
+			setColor(field, solutionGray)
+		case models.Green:
+			setColor(field, solutionGreen)
+		case models.Yellow:
+			setColor(field, solutionYellow)
+		}
+	}
 }
 
 /*
@@ -115,7 +149,7 @@ func (clv *CmdlineView) NewGame(wordLength int, maxAttempts int) {
 	clv.mainView = clv.buildMainView(wordLength, maxAttempts, clv.version)
 	clv.app.SetInputCapture(clv.inputCapture)
 	clv.app.SetRoot(clv.mainView, true)
-	clv.enableFields(0)
+	clv.enableRow(0)
 	clv.activateField(0, 0)
 }
 
@@ -252,14 +286,11 @@ func (clv *CmdlineView) activatePreviousField() {
 }
 
 func (clv *CmdlineView) activateNextRow() {
-	for _, field := range clv.fields[clv.activeRow] {
-		setColor(field, disabledBackgroundColor)
-	}
-	clv.enableFields(clv.activeRow + 1)
+	clv.enableRow(clv.activeRow + 1)
 	clv.activateField(clv.activeRow, 0)
 }
 
-func (clv *CmdlineView) enableFields(row int) {
+func (clv *CmdlineView) enableRow(row int) {
 	if row < 0 || row >= clv.height {
 		return
 	}

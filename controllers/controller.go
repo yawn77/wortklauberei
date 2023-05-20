@@ -28,7 +28,7 @@ func (gc GameController) Run() {
 
 func (gc *GameController) CreateNewGame(wordLength int, maxAttempts int) error {
 	// TODO provide propper inputs
-	gm, err := models.NewGameModel("JUPP", []string{"JUPP", "ATHI", "ZAHL", "COKE", "JACK"}, maxAttempts)
+	gm, err := models.NewGameModel("JUPP", []string{"JUPP", "ATHI", "ZAHL", "COKE", "JACK", "DAUP"}, maxAttempts)
 	if err != nil {
 		return err
 	}
