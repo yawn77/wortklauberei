@@ -33,6 +33,7 @@ type CmdlineView struct {
 	width         int
 	activeRow     int
 	activeCol     int
+	keyboard      map[rune]*tview.TextView
 	label         *tview.Flex
 	footer        *tview.Flex
 	gameOver      bool
@@ -41,13 +42,14 @@ type CmdlineView struct {
 	version       string
 }
 
-func NewCmdlineView(gh handlers.GameHandler, version string) (clv CmdlineView) {
+func NewCmdlineView(gh handlers.GameHandler, test bool, version string) (clv CmdlineView) {
 	clv.gameHandler = gh
 	clv.version = version
 	// TODO handle error
 	s, _ := tcell.NewScreen()
-	// TODO enable and fix tests
-	// s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
+	if !test {
+		s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
+	}
 	clv.app = tview.NewApplication()
 	clv.app.SetScreen(s)
 	return clv
@@ -90,7 +92,7 @@ func (clv *CmdlineView) checkSolution() {
 	for i := 0; i < len(fields); i++ {
 		s += fields[i].GetText()
 	}
-	correct, gameOver, colorCode, _, valid := clv.gameHandler.CheckSolution(s)
+	correct, gameOver, colorCode, keyboardColors, valid := clv.gameHandler.CheckSolution(s)
 	clv.gameOver = gameOver
 
 	if valid != nil {
@@ -99,6 +101,7 @@ func (clv *CmdlineView) checkSolution() {
 	}
 
 	clv.applyColorCode(colorCode)
+	clv.applyKeyboardColors(keyboardColors)
 
 	if correct || gameOver {
 		if correct {
@@ -132,6 +135,19 @@ func (clv *CmdlineView) applyColorCode(code models.ColorCode) {
 			setColor(field, solutionGreen)
 		case models.Yellow:
 			setColor(field, solutionYellow)
+		}
+	}
+}
+
+func (clv *CmdlineView) applyKeyboardColors(colors models.KeyboardColors) {
+	for r, color := range colors {
+		switch color {
+		case models.Gray:
+			clv.keyboard[r].SetBackgroundColor(solutionGray)
+		case models.Green:
+			clv.keyboard[r].SetBackgroundColor(solutionGreen)
+		case models.Yellow:
+			clv.keyboard[r].SetBackgroundColor(solutionYellow)
 		}
 	}
 }
@@ -180,6 +196,16 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 	}
 
 	hflex.AddItem(createBox(), 0, 1, false)
+	clv.keyboard = make(map[rune]*tview.TextView, 30)
+	keyboard := tview.NewFlex().SetDirection(tview.FlexRow)
+	keyboard.AddItem(clv.createKeyboardRow([]rune("QWERTZUIOPÜ")), 1, 0, false)
+	keyboard.AddItem(createBox(), 1, 0, false)
+	keyboard.AddItem(clv.createKeyboardRow([]rune("ASDFGHJKLÖ")), 1, 0, false)
+	keyboard.AddItem(createBox(), 1, 0, false)
+	keyboard.AddItem(clv.createKeyboardRow([]rune("YXCVBNMÄß")), 1, 0, false)
+	hflex.AddItem(keyboard, 5, 0, false)
+
+	hflex.AddItem(createBox(), 0, 1, false)
 	clv.label = tview.NewFlex().SetDirection(tview.FlexColumn)
 	clv.SetLabelText("")
 	hflex.AddItem(clv.label, 2, 0, false)
@@ -191,6 +217,29 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 
 func createBox() *tview.Box {
 	return tview.NewBox().SetBackgroundColor(backgroundColor)
+}
+
+func (clv *CmdlineView) createKeyboardRow(runes []rune) *tview.Flex {
+	row := tview.NewFlex().SetDirection(tview.FlexColumn)
+	row.AddItem(createBox(), 0, 1, false)
+
+	for i, r := range runes {
+		label := createLabel(r)
+		clv.keyboard[r] = label
+		row.AddItem(label, 1, 0, false)
+		if i < len(runes) {
+			row.AddItem(createBox(), 1, 0, false)
+		}
+	}
+	row.AddItem(createBox(), 0, 1, false)
+	return row
+}
+
+func createLabel(r rune) *tview.TextView {
+	label := tview.NewTextView().SetText(string(r))
+	label.SetTextColor(textColor)
+	label.SetBackgroundColor(enabledBackgroundColor)
+	return label
 }
 
 func (clv *CmdlineView) SetLabelText(text string) {

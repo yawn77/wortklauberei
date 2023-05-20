@@ -15,9 +15,9 @@ type GameController struct {
 	version   string
 }
 
-func NewGameController(version string) (gc GameController, err error) {
+func NewGameController(test bool, version string) (gc GameController, err error) {
 	gc.version = version
-	gc.view = cmdlineview.NewCmdlineView(&gc, gc.version)
+	gc.view = cmdlineview.NewCmdlineView(&gc, test, gc.version)
 	err = gc.CreateNewGame(4, 3)
 	return gc, err
 }

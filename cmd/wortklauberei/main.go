@@ -10,7 +10,7 @@ import (
 var version string
 
 func main() {
-	gc, err := controllers.NewGameController(version)
+	gc, err := controllers.NewGameController(false, version)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

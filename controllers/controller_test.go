@@ -11,7 +11,7 @@ import (
 func TestCheckSolutionCorrectAfterThreeAttempts(t *testing.T) {
 	// arrange
 	word := "dizzy"
-	gc, _ := NewGameController("0.1.0")
+	gc, _ := NewGameController(true, "0.1.0")
 	gm, _ := models.NewGameModel(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 6)
 	gc.gameModel = gm
 
@@ -45,7 +45,7 @@ func TestCheckSolutionCorrectAfterThreeAttempts(t *testing.T) {
 func TestCheckSolutionCorrectAtLastAttempt(t *testing.T) {
 	// arrange
 	word := "dizzy"
-	gc, _ := NewGameController("0.1.0")
+	gc, _ := NewGameController(true, "0.1.0")
 	gm, _ := models.NewGameModel(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 3)
 	gc.gameModel = gm
 
@@ -79,7 +79,7 @@ func TestCheckSolutionCorrectAtLastAttempt(t *testing.T) {
 func TestCheckSolutionAfterGameOver(t *testing.T) {
 	// arrange
 	word := "dizzy"
-	gc, _ := NewGameController("0.1.0")
+	gc, _ := NewGameController(true, "0.1.0")
 	gm, _ := models.NewGameModel(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 3)
 	gc.gameModel = gm
 
@@ -105,7 +105,7 @@ func TestCheckSolutionAfterGameOver(t *testing.T) {
 func TestCheckSolutionAfterMaxAttempts(t *testing.T) {
 	// arrange
 	word := "dizzy"
-	gc, _ := NewGameController("0.1.0")
+	gc, _ := NewGameController(true, "0.1.0")
 	gm, _ := models.NewGameModel(word, []string{"hello", "whizz", "pozzy", "dizzy"}, 2)
 	gc.gameModel = gm
 
@@ -169,7 +169,7 @@ func TestCheckSolutionInputValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testcase, func(t *testing.T) {
 			// arrange
-			gc, _ := NewGameController("0.1.0")
+			gc, _ := NewGameController(true, "0.1.0")
 			gm, _ := models.NewGameModel(tt.word, tt.validWords, 6)
 			gc.gameModel = gm
 
