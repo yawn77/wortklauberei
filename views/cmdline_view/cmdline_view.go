@@ -42,7 +42,7 @@ func NewCmdlineView(gh handlers.GameHandler, version string) (clv CmdlineView) {
 	clv.version = version
 	// TODO handle error
 	s, _ := tcell.NewScreen()
-	s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
+	// s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
 	clv.app = tview.NewApplication()
 	clv.app.SetScreen(s)
 	return clv
