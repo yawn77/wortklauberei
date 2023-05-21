@@ -2,7 +2,6 @@ package cmdlineview
 
 import (
 	"fmt"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/rivo/tview"
 	"github.com/yawn77/wortklauberei/handlers"
 	"github.com/yawn77/wortklauberei/models"
-	"github.com/yawn77/wortklauberei/utils"
 )
 
 var (
@@ -24,11 +22,16 @@ var (
 	solutionYellow          = tcell.NewRGBColor(0, 150, 150)
 )
 
+type field struct {
+	field *tview.InputField
+	text  string
+}
+
 type CmdlineView struct {
 	gameHandler   handlers.GameHandler
 	app           *tview.Application
 	mainView      *tview.Flex
-	fields        [][]*tview.InputField
+	fields        [][]field
 	height        int
 	width         int
 	activeRow     int
@@ -42,17 +45,19 @@ type CmdlineView struct {
 	version       string
 }
 
-func NewCmdlineView(gh handlers.GameHandler, test bool, version string) (clv CmdlineView) {
+func NewCmdlineView(gh handlers.GameHandler, test bool, version string) (clv CmdlineView, err error) {
 	clv.gameHandler = gh
 	clv.version = version
-	// TODO handle error
-	s, _ := tcell.NewScreen()
+	s, err := tcell.NewScreen()
+	if err != nil {
+		return clv, err
+	}
 	if !test {
 		s.SetCursorStyle(tcell.CursorStyleSteadyUnderline)
 	}
 	clv.app = tview.NewApplication()
 	clv.app.SetScreen(s)
-	return clv
+	return clv, nil
 }
 
 func (gc CmdlineView) Run() {
@@ -74,6 +79,8 @@ func (clv *CmdlineView) inputCapture(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyBackspace2:
 		if !clv.gameOver {
 			clv.activatePreviousField()
+		} else {
+			return nil
 		}
 	case tcell.KeyEnter:
 		if !clv.gameOver {
@@ -90,7 +97,7 @@ func (clv *CmdlineView) checkSolution() {
 	s := ""
 	fields := clv.fields[clv.activeRow]
 	for i := 0; i < len(fields); i++ {
-		s += fields[i].GetText()
+		s += fields[i].field.GetText()
 	}
 	correct, gameOver, colorCode, keyboardColors, valid := clv.gameHandler.CheckSolution(s)
 	clv.gameOver = gameOver
@@ -115,8 +122,8 @@ func (clv *CmdlineView) checkSolution() {
 	clv.activateNextRow()
 }
 
-func (clv *CmdlineView) activeField() *tview.InputField {
-	return clv.fields[clv.activeRow][clv.activeCol]
+func (clv *CmdlineView) activeField() *field {
+	return &clv.fields[clv.activeRow][clv.activeCol]
 }
 
 func setColor(field *tview.InputField, color tcell.Color) {
@@ -127,7 +134,7 @@ func setColor(field *tview.InputField, color tcell.Color) {
 func (clv *CmdlineView) applyColorCode(code models.ColorCode) {
 	row := clv.fields[clv.activeRow]
 	for i := 0; i < clv.width; i++ {
-		field := row[i]
+		field := row[i].field
 		switch code[i] {
 		case models.Gray:
 			setColor(field, solutionGray)
@@ -176,9 +183,9 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 	hflex.SetBackgroundColor(backgroundColor)
 	hflex.AddItem(createBox(), 0, 1, false)
 
-	clv.fields = make([][]*tview.InputField, height)
+	clv.fields = make([][]field, height)
 	for i := range clv.fields {
-		clv.fields[i] = make([]*tview.InputField, width)
+		clv.fields[i] = make([]field, width)
 	}
 	hflex.AddItem(createBox(), 1, 0, false)
 	for i := 0; i < height; i++ {
@@ -187,7 +194,7 @@ func (clv *CmdlineView) buildMainView(width int, height int, version string) (hf
 		row.AddItem(createBox(), 1, 0, false)
 		for j := 0; j < width; j++ {
 			clv.fields[i][j] = clv.createInputField()
-			row.AddItem(clv.fields[i][j], 1, 0, false)
+			row.AddItem(clv.fields[i][j].field, 1, 0, false)
 			row.AddItem(createBox(), 1, 0, false)
 		}
 		row.AddItem(createBox(), 0, 1, false)
@@ -251,28 +258,48 @@ func (clv *CmdlineView) SetLabelText(text string) {
 	clv.label.AddItem(createBox(), 0, 1, false)
 }
 
-func (clv *CmdlineView) createInputField() *tview.InputField {
-	field := tview.NewInputField().
+func (clv *CmdlineView) createInputField() field {
+	fieldView := tview.NewInputField().
 		SetFieldWidth(1).
 		SetAcceptanceFunc(func(textToCheck string, lastChar rune) bool {
-			return len([]rune(textToCheck)) <= 1 && (unicode.IsLetter(lastChar))
+			// return len([]rune(textToCheck)) <= 1 && (unicode.IsLetter(lastChar))
+			return !clv.gameOver && unicode.IsLetter(lastChar)
 		}).
 		SetChangedFunc(func(text string) {
-			clv.SetLabelText("")
-			if text == "" {
+			if clv.gameOver {
 				return
 			}
-			if text != "" && text != "ß" {
-				if utils.IsLower(text) {
-					clv.activeField().SetText(strings.ToUpper(text))
-					clv.activateNextField(false)
+			clv.SetLabelText("")
+
+			activeField := clv.activeField()
+			if text == "" {
+				activeField.text = text
+				return
+			}
+
+			newText := ""
+			runes := []rune(text)
+			lastRune := unicode.ToUpper(runes[len(runes)-1])
+			newText = string(lastRune)
+
+			if activeField.text != newText {
+				activeField.text = newText
+				activeField.field.SetText(newText)
+				clv.activateNextField(false)
+			} else if len(runes) > 1 {
+				lastLastRune := unicode.ToUpper(runes[len(runes)-2])
+				if lastRune == lastLastRune {
+					activeField.field.SetText(string(lastRune))
 				}
 			}
 		})
-	field.SetFieldTextColor(textColor)
-	setColor(field, disabledBackgroundColor)
+	fieldView.SetFieldTextColor(textColor)
+	setColor(fieldView, disabledBackgroundColor)
 
-	return field
+	return field{
+		field: fieldView,
+		text:  "",
+	}
 }
 
 func (clv *CmdlineView) createFooter() (ft *tview.Flex) {
@@ -305,13 +332,13 @@ func (clv *CmdlineView) activateField(row int, col int) {
 	clv.activeRow = row
 	clv.activeCol = col
 	field := clv.fields[row][col]
-	setColor(field, activeBackgroundColor)
-	clv.app.SetFocus(field)
+	setColor(field.field, activeBackgroundColor)
+	clv.app.SetFocus(field.field)
 }
 
 func (clv *CmdlineView) deactivateField(row int, col int) {
 	field := clv.fields[row][col]
-	setColor(field, enabledBackgroundColor)
+	setColor(field.field, enabledBackgroundColor)
 }
 
 func (clv *CmdlineView) activateNextField(tab bool) {
@@ -326,7 +353,7 @@ func (clv *CmdlineView) activateNextField(tab bool) {
 }
 
 func (clv *CmdlineView) activatePreviousField() {
-	if clv.activeField().GetText() != "" || clv.activeCol <= 0 {
+	if clv.activeField().field.GetText() != "" || clv.activeCol <= 0 {
 		return
 	}
 	clv.deactivateField(clv.activeRow, clv.activeCol)
@@ -344,6 +371,6 @@ func (clv *CmdlineView) enableRow(row int) {
 	}
 	clv.activeRow = row
 	for _, field := range clv.fields[row] {
-		setColor(field, enabledBackgroundColor)
+		setColor(field.field, enabledBackgroundColor)
 	}
 }

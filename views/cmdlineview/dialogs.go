@@ -85,9 +85,25 @@ func (clv CmdlineView) newGame() {
 func (clv *CmdlineView) setupGame() {
 	err := clv.gameHandler.CreateNewGame(clv.newGameWidth, clv.newGameHeight)
 	if err != nil {
-		// TODO
-		fmt.Println("ahoi")
+		clv.showError(err)
 	}
+}
+
+func (clv *CmdlineView) showError(err error) {
+	ed := tview.NewModal().
+		SetText(fmt.Sprintf(" %s ", err.Error())).
+		AddButtons([]string{"OK"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "OK" {
+				clv.newGame()
+			}
+		})
+	ed.SetBackgroundColor(backgroundColor)
+	ed.SetTextColor(textColor)
+	ed.SetButtonBackgroundColor(activeBackgroundColor)
+	ed.SetButtonTextColor(textColor)
+	clv.app.SetRoot(ed, true)
+	clv.app.SetInputCapture(nil)
 }
 
 func verifyNumberInput(textToCheck string, lastChar rune) bool {
